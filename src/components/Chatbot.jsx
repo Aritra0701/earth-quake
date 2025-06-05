@@ -21,8 +21,6 @@ const Chatbot = () => {
     const newMessages = [...messages, { text: inputValue, sender: "user" }];
     setMessages(newMessages);
     setInputValue("");
-
-    // Wait for the async bot response
     const botResponse = await generateBotResponse(inputValue);
     setMessages([...newMessages, { text: botResponse, sender: "bot" }]);
   };
@@ -33,8 +31,39 @@ const Chatbot = () => {
     }
   };
 
+  const evaluateMath = (input) => {
+    try {
+      if (/^[0-9+\-*/ ().]+$/.test(input)) {
+        const result = eval(input);
+        return `The result is ${result}`;
+      } else {
+        return null;
+      }
+    } catch {
+      return null;
+    }
+  };
+
   const generateBotResponse = async (userInput) => {
     const input = userInput.toLowerCase().trim();
+
+    const mathResult = evaluateMath(input);
+    if (mathResult) {
+      return mathResult;
+    }
+
+    if (/good\s*(morning|afternoon|evening|night)/.test(input)) {
+      const hour = new Date().getHours();
+      if (hour < 12) {
+        return "Good morning! I hope you have a fantastic start to your day!";
+      } else if (hour < 17) {
+        return "Good afternoon! How can I help you today?";
+      } else if (hour < 21) {
+        return "Good evening! How’s your day going?";
+      } else {
+        return "Good night! Sleep well and take care!";
+      }
+    }
 
     if (/weather|forecast|temperature|rain|sunny/.test(input)) {
       const cityMatch = input.match(/in\s+([a-zA-Z\s]+)/);
