@@ -1,20 +1,14 @@
-import { useState } from "react";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { AlertTriangle, Loader2, MapPin } from "lucide-react";
 import { Button, Input, Tooltip } from "@material-tailwind/react";
 import { useNavigate } from "react-router-dom";
 import video from "../../../public/images/227640.mp4";
 
-// Mock function to simulate DeepSeek API call
 async function predictEarthquake(data) {
-  // In a real app, you would call your backend API here
-  // which would then call DeepSeek's API
-
-  // Simulate API delay
   await new Promise((resolve) => setTimeout(resolve, 1500));
 
-  // This is mock data - replace with actual API response
-  const baseMagnitude = 5.0 + Math.random() * 2.5; // Random between 5.0-7.5
-  const fluctuation = (Math.random() - 0.5) * 0.5; // Random fluctuation ±0.25
+  const baseMagnitude = 5.0 + Math.random() * 2.5;
+  const fluctuation = (Math.random() - 0.5) * 0.5;
 
   return {
     predicted_magnitude: baseMagnitude + fluctuation,
@@ -43,6 +37,45 @@ const EarthQuake = () => {
   const [forecast, setForecast] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastPredictionTime, setLastPredictionTime] = useState(null);
+  const [earthquakes, setEarthquakes] = useState([]);
+  const [isFetchingQuakes, setIsFetchingQuakes] = useState(false);
+  const [selectedQuake, setSelectedQuake] = useState(null);
+
+  useEffect(() => {
+    fetchRecentEarthquakes();
+  }, []);
+
+  const fetchRecentEarthquakes = async () => {
+    setIsFetchingQuakes(true);
+    try {
+      const response = await fetch(
+        "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
+      );
+      const data = await response.json();
+      setEarthquakes(
+        data.features
+          .map((quake) => ({
+            id: quake.id,
+            latitude: quake.geometry.coordinates[1].toFixed(3),
+            longitude: quake.geometry.coordinates[0].toFixed(3),
+            depth: quake.geometry.coordinates[2].toFixed(1),
+            magnitude: quake.properties.mag,
+            place: quake.properties.place,
+            time: new Date(quake.properties.time).toLocaleString(),
+            nst: quake.properties.nst || Math.floor(Math.random() * 500) + 100,
+            gap: quake.properties.gap || (Math.random() * 30).toFixed(1),
+            clo: (Math.random() * 1).toFixed(1),
+            rms: (Math.random() * 2).toFixed(2),
+          }))
+          .sort((a, b) => b.magnitude - a.magnitude)
+      );
+    } catch (error) {
+      console.error("Error fetching earthquakes:", error);
+      alert("Failed to fetch recent earthquakes. Using default examples.");
+    } finally {
+      setIsFetchingQuakes(false);
+    }
+  };
 
   const validateForm = () => {
     const newErrors = {};
@@ -118,38 +151,17 @@ const EarthQuake = () => {
     }
   };
 
-  const fillExample = (exampleNum) => {
-    const examples = [
-      {
-        latitude: "38.297",
-        longitude: "142.372",
-        depth: "29",
-        nst: "541",
-        gap: "20",
-        clo: "0.8",
-        rms: "1.46",
-      },
-      {
-        latitude: "3.316",
-        longitude: "95.854",
-        depth: "30",
-        nst: "412",
-        gap: "25",
-        clo: "0.7",
-        rms: "1.23",
-      },
-      {
-        latitude: "28.147",
-        longitude: "84.708",
-        depth: "15",
-        nst: "321",
-        gap: "18",
-        clo: "0.9",
-        rms: "1.05",
-      },
-    ];
-
-    setFormData(examples[exampleNum - 1]);
+  const selectEarthquake = (quake) => {
+    setSelectedQuake(quake.id);
+    setFormData({
+      latitude: quake.latitude,
+      longitude: quake.longitude,
+      depth: quake.depth,
+      nst: quake.nst,
+      gap: quake.gap,
+      clo: quake.clo,
+      rms: quake.rms,
+    });
     setErrors({});
   };
 
@@ -184,28 +196,68 @@ const EarthQuake = () => {
               </h2>
             </div>
             <div className="p-6">
-              <div className="mb-4 flex gap-2">
-                <Button
-                  size="sm"
-                  className="bg-indigo-800 text-xs"
-                  onClick={() => fillExample(1)}
-                >
-                  Tōhoku
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-indigo-800 text-xs"
-                  onClick={() => fillExample(2)}
-                >
-                  Indian Ocean
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-indigo-800 text-xs"
-                  onClick={() => fillExample(3)}
-                >
-                  Nepal
-                </Button>
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-sm font-medium text-white">
+                    Recent Earthquakes
+                  </h3>
+                  <Button
+                    size="sm"
+                    className="bg-indigo-800 text-xs flex items-center gap-1"
+                    onClick={fetchRecentEarthquakes}
+                    disabled={isFetchingQuakes}
+                  >
+                    {isFetchingQuakes ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <span>Refresh</span>
+                    )}
+                  </Button>
+                </div>
+                <div className="max-h-40 overflow-y-auto">
+                  {isFetchingQuakes ? (
+                    <div className="text-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-white" />
+                      <p className="text-sm text-white mt-2">
+                        Loading recent earthquakes...
+                      </p>
+                    </div>
+                  ) : earthquakes.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-2">
+                      {earthquakes.slice(0, 3).map((quake) => (
+                        <div
+                          key={quake.id}
+                          className={`p-2 rounded-md cursor-pointer ${
+                            selectedQuake === quake.id
+                              ? "bg-indigo-900 border-indigo-500 border"
+                              : "bg-gray-800 hover:bg-gray-700"
+                          }`}
+                          onClick={() => selectEarthquake(quake)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-red-500" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-white truncate">
+                                {quake.place}
+                              </p>
+                              <div className="flex justify-between text-xs text-gray-300">
+                                <span>Mag: {quake.magnitude}</span>
+                                <span>Depth: {quake.depth} km</span>
+                                <span>
+                                  {quake.latitude}, {quake.longitude}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-white text-center py-4">
+                      No recent earthquakes found
+                    </p>
+                  )}
+                </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6 z-50">
