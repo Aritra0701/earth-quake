@@ -1,11 +1,11 @@
 @media (max-width : 540px) {
-  form{
+  /* form{
     height: 450px;
     overflow: scroll;
-  }
+  } */
 
   .video-container{
-    height: 100vh;
+    height: auto;
     object-fit: cover;
   }
 }
