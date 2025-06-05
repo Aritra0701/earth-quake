@@ -3,6 +3,7 @@ import { AlertTriangle, Loader2, MapPin } from "lucide-react";
 import { Button, Input, Tooltip } from "@material-tailwind/react";
 import { useNavigate } from "react-router-dom";
 import video from "../../../public/images/227640.mp4";
+import Chatbot from "../../components/Chatbot";
 
 async function predictEarthquake(data) {
   await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -423,6 +424,8 @@ const EarthQuake = () => {
             </div>
           )}
         </div>
+
+        <Chatbot />
       </div>
     </>
   );
