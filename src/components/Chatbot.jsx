@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 
 const Chatbot = () => {
+  const apiKey = import.meta.env.VITE_WEATHER_API_KEY;
+
+  //   console.log(apiKey);
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     { text: "Hello! How can I help you today?", sender: "bot" },
@@ -11,17 +15,16 @@ const Chatbot = () => {
   const toggleChat = () => {
     setIsOpen(!isOpen);
   };
-
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (inputValue.trim() === "") return;
 
     const newMessages = [...messages, { text: inputValue, sender: "user" }];
     setMessages(newMessages);
     setInputValue("");
-    setTimeout(() => {
-      const botResponse = generateBotResponse(inputValue);
-      setMessages([...newMessages, { text: botResponse, sender: "bot" }]);
-    }, 500);
+
+    // Wait for the async bot response
+    const botResponse = await generateBotResponse(inputValue);
+    setMessages([...newMessages, { text: botResponse, sender: "bot" }]);
   };
 
   const handleKeyPress = (e) => {
@@ -30,8 +33,28 @@ const Chatbot = () => {
     }
   };
 
-  const generateBotResponse = (userInput) => {
+  const generateBotResponse = async (userInput) => {
     const input = userInput.toLowerCase().trim();
+
+    if (/weather|forecast|temperature|rain|sunny/.test(input)) {
+      const cityMatch = input.match(/in\s+([a-zA-Z\s]+)/);
+      const city = cityMatch ? cityMatch[1].trim() : "Kolkata";
+
+      try {
+        const res = await fetch(
+          `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`
+        );
+        const data = await res.json();
+
+        if (data.cod === 200) {
+          return `The weather in ${data.name} is ${data.weather[0].description} with a temperature of ${data.main.temp}°C.`;
+        } else {
+          return `Sorry, I couldn't find the weather for "${city}". Please try another city.`;
+        }
+      } catch (error) {
+        return "Oops! I had trouble fetching the weather data. Try again later.";
+      }
+    }
 
     if (/hello|hi|hey|greetings|what's up|howdy/.test(input)) {
       return "Hi there! How can I assist you today?";
