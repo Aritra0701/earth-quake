@@ -44,8 +44,41 @@ const Chatbot = () => {
     }
   };
 
+  const getTodaysEarthquakes = async () => {
+    const today = new Date();
+    const start = today.toISOString().split("T")[0];
+    const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=${start}`;
+
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.features && data.features.length > 0) {
+        return data.features.slice(0, 3).map((quake) => {
+          const { place, mag, time } = quake.properties;
+          const eventTime = new Date(time).toLocaleTimeString();
+          return (
+            <li>
+              A magnitude {mag} earthquake occurred near {place} at {eventTime}
+            </li>
+          );
+        });
+      } else {
+        return ["No significant earthquakes have been reported so far today."];
+      }
+    } catch (err) {
+      return [
+        "I couldn't fetch earthquake data right now. Please try again later.",
+      ];
+    }
+  };
+
   const generateBotResponse = async (userInput) => {
     const input = userInput.toLowerCase().trim();
+
+    if (/earthquake|seismic|quake|tremor|earth quakes?/.test(input)) {
+      return await getTodaysEarthquakes();
+    }
 
     const mathResult = evaluateMath(input);
     if (mathResult) {
@@ -147,9 +180,9 @@ const Chatbot = () => {
             </button>
           </div>
           <div className="chatbot-messages">
-            {messages.map((message, index) => (
-              <div key={index} className={`message ${message.sender}`}>
-                {message.text}
+            {messages?.map((message, index) => (
+              <div key={index} className={`message ${message?.sender}`}>
+                {message?.text}
               </div>
             ))}
             <div ref={messagesEndRef} />
@@ -200,7 +233,7 @@ const Chatbot = () => {
 
         .chatbot-window {
           width: 350px;
-          height: 500px;
+          height: 650px;
           background-color: white;
           border-radius: 10px;
           box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
